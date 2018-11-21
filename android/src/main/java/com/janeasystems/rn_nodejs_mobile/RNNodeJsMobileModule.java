@@ -9,6 +9,7 @@ import com.facebook.react.bridge.WritableMap;
 import com.facebook.react.bridge.ReadableMap;
 import com.facebook.react.bridge.ReadableType;
 import com.facebook.react.bridge.Arguments;
+import com.facebook.react.bridge.LifecycleEventListener;
 import javax.annotation.Nullable;
 import android.util.Log;
 
@@ -17,12 +18,14 @@ import android.content.res.AssetManager;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.SharedPreferences;
+import android.system.Os;
+import android.system.ErrnoException;
 
 import java.io.*;
 import java.util.*;
 import java.util.concurrent.Semaphore;
 
-public class RNNodeJsMobileModule extends ReactContextBaseJavaModule {
+public class RNNodeJsMobileModule extends ReactContextBaseJavaModule implements LifecycleEventListener {
 
   private final ReactApplicationContext reactContext;
   private static final String TAG = "NODEJS-RN";
@@ -32,6 +35,7 @@ public class RNNodeJsMobileModule extends ReactContextBaseJavaModule {
   private static final String SHARED_PREFS = "NODEJS_MOBILE_PREFS";
   private static final String LAST_UPDATED_TIME = "NODEJS_MOBILE_APK_LastUpdateTime";
   private static final String BUILTIN_NATIVE_ASSETS_PREFIX = "nodejs-native-assets-";
+  private static final String SYSTEM_CHANNEL = "_SYSTEM_";
 
   private static String trashDirPath;
   private static String filesDirPath;
@@ -45,6 +49,9 @@ public class RNNodeJsMobileModule extends ReactContextBaseJavaModule {
   private static boolean initCompleted = false;
 
   private static AssetManager assetManager;
+
+  // Flag to indicate if node is ready to receive app events.
+  private static boolean nodeIsReadyForAppEvents = false;
 
   static {
     System.loadLibrary("nodejs-mobile-react-native-native-lib");
@@ -60,6 +67,7 @@ public class RNNodeJsMobileModule extends ReactContextBaseJavaModule {
   public RNNodeJsMobileModule(ReactApplicationContext reactContext) {
     super(reactContext);
     this.reactContext = reactContext;
+    reactContext.addLifecycleEventListener(this);
     filesDirPath = reactContext.getFilesDir().getAbsolutePath();
 
     // The paths where we expect the node project assets to be at runtime.
@@ -67,6 +75,16 @@ public class RNNodeJsMobileModule extends ReactContextBaseJavaModule {
     builtinModulesPath = filesDirPath + "/" + NODEJS_BUILTIN_MODULES;
     trashDirPath = filesDirPath + "/" + TRASH_DIR;
     nativeAssetsPath = BUILTIN_NATIVE_ASSETS_PREFIX + getCurrentABIName();
+
+    // Sets the TMPDIR environment to the cacheDir, to be used in Node as os.tmpdir
+    try {
+      Os.setenv("TMPDIR", reactContext.getCacheDir().getAbsolutePath(), true);
+    } catch (ErrnoException e) {
+      e.printStackTrace();
+    }
+
+    // Register the filesDir as the Node data dir.
+    registerNodeDataDirPath(filesDirPath);
 
     asyncInit();
   }
@@ -170,8 +188,8 @@ public class RNNodeJsMobileModule extends ReactContextBaseJavaModule {
   }
 
   @ReactMethod
-  public void sendMessage(String msg) {
-    notifyNode(msg);
+  public void sendMessage(String channel, String msg) {
+    sendMessageToNodeChannel(channel, msg);
   }
 
   // Sends an event through the App Event Emitter.
@@ -182,15 +200,52 @@ public class RNNodeJsMobileModule extends ReactContextBaseJavaModule {
       .emit(eventName, params);
   }
 
+  public static void sendMessageToApplication(String channelName, String msg) {
+    if (channelName.equals(SYSTEM_CHANNEL)) {
+      // If it's a system channel call, handle it in the plugin native side.
+      handleAppChannelMessage(msg);
+    } else {
+      // Otherwise, send it to React Native.
+      sendMessageBackToReact(channelName, msg);
+    }
+  }
+
+  @Override
+  public void onHostPause() {
+    if (nodeIsReadyForAppEvents) {
+      sendMessageToNodeChannel(SYSTEM_CHANNEL, "pause");
+    }
+  }
+
+  @Override
+  public void onHostResume() {
+    if (nodeIsReadyForAppEvents) {
+      sendMessageToNodeChannel(SYSTEM_CHANNEL, "resume");
+    }
+  }
+
+  @Override
+  public void onHostDestroy() {
+      // Activity `onDestroy`
+  }
+
+  public static void handleAppChannelMessage(String msg) {
+    if (msg.equals("ready-for-app-events")) {
+      nodeIsReadyForAppEvents=true;
+    }
+  }
+
   // Called from JNI when node sends a message through the bridge.
-  public static void sendMessageBackToReact(String msg) {
+  public static void sendMessageBackToReact(String channelName, String msg) {
     if (_instance != null) {
       final RNNodeJsMobileModule _moduleInstance = _instance;
+      final String _channelNameToPass = new String(channelName);
       final String _msgToPass = new String(msg);
       new Thread(new Runnable() {
         @Override
         public void run() {
           WritableMap params = Arguments.createMap();
+          params.putString("channelName", _channelNameToPass);
           params.putString("message", _msgToPass);
           _moduleInstance.sendEvent("nodejs-mobile-react-native-message", params);
         }
@@ -198,11 +253,13 @@ public class RNNodeJsMobileModule extends ReactContextBaseJavaModule {
     }
   }
 
+  public native void registerNodeDataDirPath(String dataDir);
+
   public native String getCurrentABIName();
 
   public native Integer startNodeWithArguments(String[] arguments, String modulesPath, boolean option_redirectOutputToLogcat);
 
-  public native void notifyNode(String msg);
+  public native void sendMessageToNodeChannel(String channelName, String msg);
 
   private void waitForInit() {
     if (!initCompleted) {
@@ -342,6 +399,8 @@ public class RNNodeJsMobileModule extends ReactContextBaseJavaModule {
         line = reader.readLine();
       }
       reader.close();
+    } catch (FileNotFoundException e) {
+      Log.d(TAG, "File not found: " + filename);
     } catch (IOException e) {
       lines = new ArrayList();
       e.printStackTrace();

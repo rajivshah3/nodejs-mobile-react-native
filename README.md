@@ -47,6 +47,8 @@ rn_bridge.channel.on('message', (msg) => {
 rn_bridge.channel.send("Node was initialized.");
 ```
 
+Recent versions of `react-native` (since 0.57) throw an error during the bundling of the project. Please look at [the Troubleshooting Duplicate module name section](#duplicate-module-name) for instructions on how to configure the `react-native` bundler to ignore the `nodejs-project` folder.
+
 The Node.js runtime accesses files through Unix-based pathnames, so in Android the node project is copied from the project's apk assets into the default application data folder at startup, during the first run or after an update, under `nodejs-project/`.
 
 > Attention: Given the project folder will be overwritten after each application update, it should not be used for persistent storage.
@@ -110,6 +112,177 @@ We can then define a button in our interface to send messages to our Node.js pro
     />
 ```
 
+## Methods available in the React Native layer
+
+These methods can be called from the React Native javascript code directly:
+```js
+import nodejs from 'nodejs-mobile-react-native';
+```
+
+- `nodejs.start`
+- `nodejs.startWithScript`
+- `nodejs.channel.addListener`
+- `nodejs.channel.post`
+- `nodejs.channel.send`
+
+> `nodejs.channel.send(...msg)` is equivalent to `nodejs.channel.post('message', ...msg)`. It is maintained for backward compatibility purposes.
+
+> The `nodejs.channel` object inherits from [React Native's `EventEmitter` class](https://github.com/facebook/react-native/blob/055c941c4045468af4ff2b8162d3a35dd993b1b9/Libraries/vendor/emitter/EventEmitter.js), with `emit` removed and `post` and `send` added.
+
+### nodejs.start(scriptFileName [, options])
+
+| Param | Type |
+| --- | --- |
+| scriptFileName | <code>string</code> |
+| options | <code>[StartupOptions](#ReactNative.StartupOptions)</code>  |
+
+Starts the nodejs-mobile runtime thread with a file inside the `nodejs-project` directory.
+
+### nodejs.startWithScript(scriptBody [, options])
+
+| Param | Type |
+| --- | --- |
+| scriptBody | <code>string</code> |
+| options | <code>[StartupOptions](#ReactNative.StartupOptions)</code>  |
+
+Starts the nodejs-mobile runtime thread with a script body.
+
+### nodejs.channel.addListener(event, callback)
+
+| Param | Type |
+| --- | --- |
+| event | <code>string</code> |
+| callback | <code>[function](#ReactNative.channelCallback)</code> |
+
+Registers a callback for user-defined events raised from the nodejs-mobile side.
+
+### nodejs.channel.post(event, ...message)
+
+| Param | Type |
+| --- | --- |
+| event | <code>string</code> |
+| ...message | any JS type that can be serialized with `JSON.stringify` and deserialized with `JSON.parse` |
+
+Raises a user-defined event on the nodejs-mobile side.
+
+### nodejs.channel.send(...message)
+
+| Param | Type |
+| --- | --- |
+| ...message | any JS type that can be serialized with `JSON.stringify` and deserialized with `JSON.parse` |
+
+Raises a 'message' event on the nodejs-mobile side.
+It is an alias for `nodejs.channel.post('message', ...message);`.
+
+<a name="ReactNative.StartupOptions"></a>
+### StartupOptions: <code>object</code>
+| Name | Type | Default | Description |
+| --- | --- | --- | --- |
+| redirectOutputToLogcat | <code>boolean</code> | <code>true</code> | Allows to disable the redirection of the Node stdout/stderr to the Android logcat |
+
+
+## Methods available in the Node layer
+
+The following methods can be called from the Node javascript code through the `rn-bridge` module:
+```js
+  const rn_bridge = require('rn-bridge');
+```
+
+- `rn_bridge.channel.on`
+- `rn_bridge.channel.post`
+- `rn_bridge.channel.send`
+- `rn_bridge.app.on`
+- `rn_bridge.app.datadir`
+
+> `rn_bridge.channel.send(...msg)` is equivalent to `rn_bridge.channel.post('message', ...msg)`. It is maintained for backward compatibility purposes.
+
+> The `rn_bridge.channel` object inherits from [Node's `EventEmitter` class](https://github.com/janeasystems/nodejs-mobile/blob/9e90dd8c14fce5b047aa16d00e22a8ef44222a99/lib/events.js), with `emit` removed and `post` and `send` added.
+
+### rn_bridge.channel.on(event, callback)
+
+| Param | Type |
+| --- | --- |
+| event | <code>string</code> |
+| callback | <code>[function](#ReactNative.channelCallback)</code> |
+
+Registers a callback for user-defined events raised from the React Native side.
+
+> To receive messages from `nodejs.channel.send`, use:
+> ```js
+>   rn_bridge.channel.on('message', listenerCallback);
+> ```
+
+### rn_bridge.channel.post(event, ...message)
+
+| Param | Type |
+| --- | --- |
+| event | <code>string</code> |
+| ...message | any JS type that can be serialized with `JSON.stringify` and deserialized with `JSON.parse` |
+
+Raises a user-defined event on the React Native side.
+
+### rn_bridge.channel.send(...message)
+
+| Param | Type |
+| --- | --- |
+| ...message | any JS type that can be serialized with `JSON.stringify` and deserialized with `JSON.parse` |
+
+Raises a 'message' event on the React Native side.
+It is an alias for `rn_bridge.channel.post('message', ...message);`.
+
+### rn_bridge.app.on(event, callback)
+
+| Param | Type |
+| --- | --- |
+| event | <code>string</code> |
+| callback | <code>function</code> |
+
+Registers callbacks for App events.
+Currently supports the 'pause' and 'resume' events, which are raised automatically when the app switches to the background/foreground.
+
+```js
+rn_bridge.app.on('pause', (pauseLock) => {
+  console.log('[node] app paused.');
+  pauseLock.release();
+});
+rn_bridge.app.on('resume', () => {
+  console.log('[node] app resumed.');
+});
+```
+
+The 'pause' event is raised when the application switches to the background. On iOS, the system will wait for the 'pause' event handlers to return before finally suspending the application. For the purpose of letting the iOS application know when it can safely suspend after going to the background, a `pauseLock` argument is passed to each 'pause' listener, so that `release()` can be called on it to signal that listener has finished doing all the work it needed to do. The application will only suspend after all the locks have been released (or iOS forces it to).
+
+```js
+rn_bridge.app.on('pause', (pauseLock) => {
+  server.close( () => {
+    // App will only suspend after the server stops listening for connections and current connections are closed.
+    pauseLock.release();
+  });
+});
+```
+
+**Warning :** On iOS, the application will eventually be suspended, so the pause event should be used to run the clean up operations as quickly as possible and let the application suspend after that. Make sure to call `pauseLock.release()` in each 'pause' event listener, or your Application will keep running in the background for as long as iOS will allow it.
+
+### rn_bridge.app.datadir()
+
+Returns a writable path used for persistent data storage in the application. Its value corresponds to `NSDocumentDirectory` on iOS and `FilesDir` on Android.
+
+<a name="ReactNative.channelCallback"></a>
+### Channel callback: <code>function(arg)</code>
+| Name | Type |
+| --- | --- |
+| arg | any JS type that can be serialized with `JSON.stringify` and deserialized with `JSON.parse` |
+
+The messages sent through the channel can be of any type that can be correctly serialized with [`JSON.stringify`](https://www.w3schools.com/js/js_json_stringify.asp) on one side and deserialized with [`JSON.parse`](https://www.w3schools.com/js/js_json_parse.asp) on the other side, as it is what the channel does internally. This means that passing JS dates through the channel will convert them to strings and functions will be removed from their containing objects. In line with [The JSON Data Interchange Syntax Standard](http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf), the channel supports sending messages that are composed of these JS types: `Boolean`, `Number`, `String`, `Object`, `Array`.
+
+## Notes about other node APIs
+
+### os.tmpdir()
+
+On iOS, `os.tmpdir()` returns a temporary directory, since iOS sets the `TMPDIR` environment variable of the application to the equivalent of calling `NSTemporaryDirectory`.
+
+The Android OS doesn't define a temporary directory for the system or application, so the plugin sets the `TMPDIR` environment variable to the value of the application context's `CacheDir` value.
+
 ## Troubleshooting
 
 On Android applications, the `react-native` build process is sometimes unable to rebuild assets.
@@ -129,6 +302,43 @@ cd android
 ./gradlew clean
 cd ..
 react-native run-android
+```
+
+### Duplicate module name
+
+During the `react-native` application's build process, the `nodejs-project` gets copied to the application's assets, where they'll be used by `nodejs-mobile`.
+The `react-native` packager monitors the project's folder for javascript packages and may throw a "`Error: jest-haste-map: @providesModule naming collision`" error.
+
+To avoid this error, instruct the `react-native` packager to ignore the `nodejs-project` and the platform folders where it is copied to. Create a `rn-cli.config.js` file in your `react-native` project's root path with the following contents if you're using recent versions of `react-native` (`>= v0.57`):
+
+```js
+const blacklist = require('metro-config/src/defaults/blacklist');
+
+module.exports = {
+  resolver:{
+    blacklistRE: blacklist([
+      /nodejs-assets\/.*/,
+      /android\/.*/,
+      /ios\/.*/
+    ])
+  },
+};
+
+```
+
+These are the contents of `rn-cli.config.js` if `react-native < v0.57`:
+```js
+const blacklist = require('metro/src/blacklist');
+
+module.exports = {
+  getBlacklistRE: function() {
+    return blacklist([
+      /nodejs-assets\/.*/,
+      /android\/.*/,
+      /ios\/.*/
+    ]);
+  },
+};
 ```
 
 ## Changelog

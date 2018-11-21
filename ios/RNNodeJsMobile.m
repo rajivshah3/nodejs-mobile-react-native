@@ -20,7 +20,7 @@ NSString* nodePath;
 
 + (BOOL)requiresMainQueueSetup
 {
-    return NO;
+    return YES;
 }
 
 - (id)init
@@ -30,7 +30,7 @@ NSString* nodePath;
   {
     [[NodeRunner sharedInstance] setCurrentRNNodeJsMobile:self];
   }
-  
+
   NSString* builtinModulesPath = [[NSBundle mainBundle] pathForResource:BUILTIN_MODULES_RESOURCE_PATH ofType:@""];
   nodePath = [[NSBundle mainBundle] pathForResource:NODEJS_PROJECT_RESOURCE_PATH ofType:@""];
   nodePath = [nodePath stringByAppendingString:@":"];
@@ -41,10 +41,10 @@ NSString* nodePath;
 
 RCT_EXPORT_MODULE()
 
-RCT_EXPORT_METHOD(sendMessage:(NSString *)script)
+RCT_EXPORT_METHOD(sendMessage:(NSString *)channelName:(NSString *)message)
 {
   dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND, 0), ^{
-    [[NodeRunner sharedInstance] sendMessageToNode:script];
+    [[NodeRunner sharedInstance] sendMessageToNode:channelName:message];
   });
 }
 
@@ -113,9 +113,8 @@ RCT_EXPORT_METHOD(startNodeWithScript:(NSString *)script options:(NSDictionary *
       selector:@selector(callStartNodeWithScript:)
       object:script
     ];
-    // Set 1MB of stack space for the Node.js thread,
-    // the same as the iOS application's main thread.
-    [nodejsThread setStackSize:1024*1024];
+    // Set 2MB of stack space for the Node.js thread.
+    [nodejsThread setStackSize:2*1024*1024];
     [nodejsThread start];
   }
 }
@@ -131,18 +130,17 @@ RCT_EXPORT_METHOD(startNodeProject:(NSString *)mainFileName options:(NSDictionar
       selector:@selector(callStartNodeProject:)
       object:mainFileName
     ];
-    // Set 1MB of stack space for the Node.js thread,
-    // the same as the iOS application's main thread.
-    [nodejsThread setStackSize:1024*1024];
+    // Set 2MB of stack space for the Node.js thread.
+    [nodejsThread setStackSize:2*1024*1024];
     [nodejsThread start];
   }
 }
 
--(void) sendMessageBackToReact:(NSString*)message
+-(void) sendMessageBackToReact:(NSString*)channelName:(NSString*)message
 {
   dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND, 0), ^{
     [self.bridge.eventDispatcher sendAppEventWithName:@"nodejs-mobile-react-native-message"
-      body:@{@"message": message}
+      body:@{@"channelName": channelName, @"message": message}
     ];
   });
 }

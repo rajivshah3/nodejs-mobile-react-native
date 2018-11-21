@@ -6,6 +6,9 @@
 </tr>
 <tr>
 <td>
+<a href="#0.3.2">0.3.2</a><br/>
+<a href="#0.3.1">0.3.1</a><br/>
+<a href="#0.3.0">0.3.0</a><br/>
 <a href="#0.2.1">0.2.1</a><br/>
 <a href="#0.2.0">0.2.0</a><br/>
 <a href="#0.1.4">0.1.4</a><br/>
@@ -16,8 +19,47 @@
 </tr>
 </table>
 
+<a id="0.3.2"></a>
+## 2018-11-21, Version 0.3.2 (Current)
+
+### Notable Changes
+
+* Hotfixes the node thread stack size on iOS, when starting the runtime with a node project folder.
+
+### Commits
+
+* [[`082cbc0`](https://github.com/janeasystems/nodejs-mobile-react-native/commit/082cbc0d4815d435a8c06cd34bea4c0a6d573dec)] - ios: set node project thread stack size to 2MB (Jaime Bernardo)
+
+<a id="0.3.1"></a>
+## 2018-11-07, Version 0.3.1
+
+### Notable Changes
+
+* Update `nodejs-mobile` binaries to `v0.1.8`, fixing exceptions on Apple A12 CPUs for iOS and being built with NDK r18b for Android.
+
+### Commits
+
+* [[`0e6ffe9`](https://github.com/janeasystems/nodejs-mobile-react-native/commit/0e6ffe9cfb26bf0fa2b8ba8a823067d4ad35ab9c)] - core: update nodejs-mobile v0.1.8 (Jaime Bernardo)
+* [[`ed727ed`](https://github.com/janeasystems/nodejs-mobile-react-native/commit/ed727edea17e8a9e1a85cef3413becc83b8a0328)] - docs: duplicate module name instructions (Jaime Bernardo)
+
+<a id="0.3.0"></a>
+## 2018-09-03, Version 0.3.0
+
+### Notable Changes
+
+* Add new channel APIs.
+
+### Commits
+
+* [[`085e047`](https://github.com/janeasystems/nodejs-mobile-react-native/commit/085e04762b98859354738611cd4e9fc0828c679e)] - docs: document os.tmpdir behavior in node (Jaime Bernardo)
+* [[`2ccc542`](https://github.com/janeasystems/nodejs-mobile-react-native/commit/2ccc54290d59cc014d930d1b4bac7c8486bc6316)] - android: show alternative to misleading error log (Jaime Bernardo)
+* [[`ff308a6`](https://github.com/janeasystems/nodejs-mobile-react-native/commit/ff308a6107c1857e7ec94599420ede1b712e0931)] - docs: document the new channel API, app channel (Jaime Bernardo)
+* [[`1116698`](https://github.com/janeasystems/nodejs-mobile-react-native/commit/11166985ef65b253fcb7080289619c31466ead7a)] - plugin: add app.datadir API to get writable path (Jaime Bernardo)
+* [[`10c1d3e`](https://github.com/janeasystems/nodejs-mobile-react-native/commit/10c1d3e75af44f1f5b473c0dba552363e13cfe49)] - plugin: add app channel for pause-resume events (Jaime Bernardo)
+* [[`7c922f9`](https://github.com/janeasystems/nodejs-mobile-react-native/commit/7c922f9751e577154cbc95215bb8c83dbe2254b1)] - plugin: improved events channel (Jaime Bernardo)
+
 <a id="0.2.1"></a>
-## 2018-07-30, Version 0.2.1 (Current)
+## 2018-07-30, Version 0.2.1
 
 ### Notable Changes
 

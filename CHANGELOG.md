@@ -6,6 +6,12 @@
 </tr>
 <tr>
 <td>
+<a href="#0.4.3">0.4.3</a><br/>
+<a href="#0.4.2">0.4.2</a><br/>
+<a href="#0.4.1">0.4.1</a><br/>
+<a href="#0.4.0">0.4.0</a><br/>
+<a href="#0.3.4">0.3.4</a><br/>
+<a href="#0.3.3">0.3.3</a><br/>
 <a href="#0.3.2">0.3.2</a><br/>
 <a href="#0.3.1">0.3.1</a><br/>
 <a href="#0.3.0">0.3.0</a><br/>
@@ -19,8 +25,81 @@
 </tr>
 </table>
 
+<a id="0.4.3"></a>
+## 2019-06-10, Version 0.4.3 (Current)
+
+### Notable Changes
+
+* Fix a compatibility issue with newer versions of Gradle when building for Android.
+
+### Commits
+
+* [[`aafb0a5`](https://github.com/janeasystems/nodejs-mobile-react-native/commit/aafb0a56b6960b2b116ad9ef9b673738d99a4512)] - android: use input and output dir syntax in Gradle (Jaime Bernardo)
+
+<a id="0.4.2"></a>
+## 2019-06-03, Version 0.4.2
+
+### Notable Changes
+
+* Update `nodejs-mobile-gyp` to `v0.3.1`, fixing a potential security issue.
+
+### Commits
+
+* [[`14c5554`](https://github.com/janeasystems/nodejs-mobile-react-native/commit/14c555472bb1626b8a0ed56bd5d72ce7ed37b646)] - plugin: update nodejs-mobile-gyp to 0.3.1 (Julia Friesel)
+
+<a id="0.4.1"></a>
+## 2019-04-24, Version 0.4.1
+
+### Notable Changes
+
+* Update `nodejs-mobile` binaries to `v0.2.1`, fixing an App Store submission error.
+
+### Commits
+
+* [[`13e15a4`](https://github.com/janeasystems/nodejs-mobile-react-native/commit/13e15a44d3af89454669ee2423642a67c592e376)] - plugin: patch node-pre-gyp libc replacement (Jaime Bernardo)
+* [[`bb93132`](https://github.com/janeasystems/nodejs-mobile-react-native/commit/bb9313234715472229e16907f567deb95174f56b)] - android: use minSdkVersion to build native modules (Jaime Bernardo)
+* [[`5e37e7a`](https://github.com/janeasystems/nodejs-mobile-react-native/commit/5e37e7a1ef7532afa78aededfb33f00643f839b8)] - core: update nodejs-mobile v0.2.1 (Jaime Bernardo)
+* [[`829ec3a`](https://github.com/janeasystems/nodejs-mobile-react-native/commit/829ec3ad804aae958813026ab544055faf7dfbba)] - android: Use ReactModule annotation from 0.58 (André Staltz)
+
+<a id="0.4.0"></a>
+## 2019-04-04, Version 0.4.0
+
+### Notable Changes
+
+* Update `nodejs-mobile` binaries to `v0.2.0`, which updates the engine to `v10.13.0` LTS.
+
+### Commits
+
+* [[`844fce9`](https://github.com/janeasystems/nodejs-mobile-react-native/commit/844fce9cf8329f2c816de4e7f2d1efeeeee88439)] - docs: mention metro.config.js in Troubleshooting (Jaime Bernardo)
+* [[`9655d3a`](https://github.com/janeasystems/nodejs-mobile-react-native/commit/9655d3af08102a463891052772e848e94e4c14be)] - android: fix libc++_shared packaging in 0.59 (Jaime Bernardo)
+* [[`c6d9a23`](https://github.com/janeasystems/nodejs-mobile-react-native/commit/c6d9a239d3422a78bcfe95ab745e4f06408a2379)] - android: fix gradle compile deprecation warning (Jaime Bernardo)
+* [[`81567e4`](https://github.com/janeasystems/nodejs-mobile-react-native/commit/81567e4e605329a2659e9f7ec4c25ade20c4fdc5)] - core: update nodejs-mobile v0.2.0 (Jaime Bernardo)
+
+<a id="0.3.4"></a>
+## 2019-03-18, Version 0.3.4
+
+### Notable Changes
+
+* Hotfix release: fix postlink script paths for `react-native >= 0.59`.
+
+### Commits
+* [[`ba9d5d4`](https://github.com/janeasystems/nodejs-mobile-react-native/commit/ba9d5d48c413550a890aeb9ec2e895db93eeb5bb)] - plugin: update script paths for react-native 0.59 (Jaime Bernardo)
+
+<a id="0.3.3"></a>
+## 2019-02-19, Version 0.3.3
+
+### Notable Changes
+
+* Update `nodejs-mobile` binaries to `v0.1.9`.
+* Add 64 bit binaries for Android.
+
+### Commits
+* [[`9357f13`](https://github.com/janeasystems/nodejs-mobile-react-native/commit/9357f139e6c9594b1746c3672eb111d1a7c0c529)] - android: build native modules for every arch (Jaime Bernardo)
+* [[`fbab03e`](https://github.com/janeasystems/nodejs-mobile-react-native/commit/fbab03e7372167a2ccba766d043a8559b309586e)] - android: add 64 bit binaries (Jaime Bernardo)
+* [[`db830fe`](https://github.com/janeasystems/nodejs-mobile-react-native/commit/db830fe3ec75092c3b865d8ed1f1d8189aa0ec71)] - core: update nodejs-mobile v0.1.9 (Jaime Bernardo)
+
 <a id="0.3.2"></a>
-## 2018-11-21, Version 0.3.2 (Current)
+## 2018-11-21, Version 0.3.2
 
 ### Notable Changes
 

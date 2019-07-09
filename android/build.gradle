@@ -12,20 +12,56 @@ buildscript {
 apply plugin: 'com.android.library'
 
 def _nodeTargetSdkVersion = ((rootProject?.ext?.properties?.targetSdkVersion) ?: 22)
+def _nodeMinSdkVersion = ((rootProject?.ext?.properties?.minSdkVersion) ?: 16)
+def _compileNativeModulesSdkVersion = _nodeMinSdkVersion;
+if (_compileNativeModulesSdkVersion<21) {
+    // 21 is the minimum sdk version Node is built with.
+    _compileNativeModulesSdkVersion=21;
+}
+def DoesAppAlreadyDefineWantedSTL() {
+    // Since react-native 0.59.0, the Application already defines libc++_shared as the APP_STL.
+    // Defining it also in this plugin would lead to a build error when merging assets.
+    try {
+        def _reactAndroidPropertiesFile = file("${rootDir}/../node_modules/react-native/ReactAndroid/gradle.properties");
+        def _reactAndroidProperties = new Properties()
+        if (_reactAndroidPropertiesFile.exists())
+        {
+            _reactAndroidPropertiesFile.withInputStream { _reactAndroidProperties.load(it) }
+        }
+        def _semver = _reactAndroidProperties.getProperty("VERSION_NAME").tokenize('.');
+        if (_semver.size() != 3) {
+            return false
+        }
+        def _major = _semver[0].toInteger()
+        def _minor = _semver[1].toInteger()
+        if ( _major > 0 || (_major == 0 && _minor >= 59) ) {
+            return true
+        } else {
+            return false
+        }
+
+    } catch ( Exception e ) {
+        return false
+    }
+}
+
+def _isCorrectSTLDefinedByApp = DoesAppAlreadyDefineWantedSTL()
 
 android {
     compileSdkVersion ((rootProject?.ext?.properties?.compileSdkVersion) ?: 23)
     buildToolsVersion ((rootProject?.ext?.properties?.buildToolsVersion) ?: "23.0.1")
 
     defaultConfig {
-        minSdkVersion ((rootProject?.ext?.properties?.minSdkVersion) ?: 16)
+        minSdkVersion _nodeMinSdkVersion
         targetSdkVersion _nodeTargetSdkVersion
         versionCode 1
         versionName "1.0"
         externalNativeBuild {
             cmake {
                 cppFlags ""
-                arguments "-DANDROID_STL=c++_shared"
+                if(!_isCorrectSTLDefinedByApp) {
+                    arguments "-DANDROID_STL=c++_shared"
+                }
             }
         }
         ndk {
@@ -56,7 +92,7 @@ repositories {
 }
 
 dependencies {
-    compile 'com.facebook.react:react-native:+'
+    implementation 'com.facebook.react:react-native:+'
 }
 
 task CopyNodeProjectAssetsFolder (type:Sync) {
@@ -71,7 +107,7 @@ task CopyNodeProjectAssetsFolder (type:Sync) {
 task GenerateNodeProjectAssetsLists {
     dependsOn "CopyNodeProjectAssetsFolder"
     description "Generates a list for runtime copying"
-    inputs.file "${rootProject.buildDir}/nodejs-assets/"
+    inputs.dir "${rootProject.buildDir}/nodejs-assets/"
     outputs.file "${rootProject.buildDir}/nodejs-assets/file.list"
     outputs.file "${rootProject.buildDir}/nodejs-assets/dir.list"
     doLast{
@@ -188,7 +224,13 @@ if ("1".equals(shouldRebuildNativeModules)) {
     }
     GenerateNodeProjectAssetsLists.dependsOn "ApplyPatchScriptToModules"
 
-    android.defaultConfig.ndk.abiFilters.each { abi_name ->
+    def nativeModulesABIs = android.defaultConfig.ndk.abiFilters;
+    if (nativeModulesABIs == null) {
+        // No abiFilter is defined for the build. Build native modules for eevery architecture.
+        nativeModulesABIs = ["armeabi-v7a", "x86", "arm64-v8a", "x86_64"] as Set<String>;
+    }
+
+    nativeModulesABIs.each { abi_name ->
         String temp_arch = {
             switch (abi_name) {
                 case 'armeabi-v7a':
@@ -299,8 +341,8 @@ if ("1".equals(shouldRebuildNativeModules)) {
         task "MakeToolchain${abi_name}" (type:Exec) {
             description = "Building a native toolchain to compile nodejs-mobile native modules for ${abi_name}."
             executable = "${ndk_bundle_path}/build/tools/make-standalone-toolchain.sh"
-            args "--toolchain=${temp_toolchain_name}-${temp_cc_ver}", "--arch=${temp_arch}", "--install-dir=${standalone_toolchain}", "--stl=libc++", "--force", "--platform=android-${_nodeTargetSdkVersion}"
-            outputs.file "${standalone_toolchain}"
+            args "--toolchain=${temp_toolchain_name}-${temp_cc_ver}", "--arch=${temp_arch}", "--install-dir=${standalone_toolchain}", "--stl=libc++", "--force", "--platform=android-${_compileNativeModulesSdkVersion}"
+            outputs.dir "${standalone_toolchain}"
         }
 
         task "BuildNpmModules${abi_name}" (type:Exec) {
@@ -308,7 +350,7 @@ if ("1".equals(shouldRebuildNativeModules)) {
             dependsOn "MakeToolchain${abi_name}"
             description = "Building native modules for ${abi_name}."
             inputs.file "${rootProject.buildDir}/nodejs-native-assets-temp-build/nodejs-native-assets-${abi_name}/copy.timestamp"
-            outputs.file "${rootProject.buildDir}/nodejs-native-assets-temp-build/nodejs-native-assets-${abi_name}/nodejs-project/"
+            outputs.dir "${rootProject.buildDir}/nodejs-native-assets-temp-build/nodejs-native-assets-${abi_name}/nodejs-project/"
             workingDir "${rootProject.buildDir}/nodejs-native-assets-temp-build/nodejs-native-assets-${abi_name}/nodejs-project/"
             commandLine npmCommandName, '--verbose', 'rebuild', '--build-from-source'
             environment ('npm_config_node_engine', 'v8' )
@@ -351,7 +393,7 @@ if ("1".equals(shouldRebuildNativeModules)) {
         task "GenerateNodeNativeAssetsLists${abi_name}" {
             dependsOn "CopyBuiltNpmAssets${abi_name}"
             description "Generates a list for runtime copying"
-            inputs.file "${rootProject.buildDir}/nodejs-native-assets/nodejs-native-assets-${abi_name}/"
+            inputs.dir "${rootProject.buildDir}/nodejs-native-assets/nodejs-native-assets-${abi_name}/"
             outputs.file "${rootProject.buildDir}/nodejs-native-assets/nodejs-native-assets-${abi_name}/file.list"
             outputs.file "${rootProject.buildDir}/nodejs-native-assets/nodejs-native-assets-${abi_name}/dir.list"
             doLast{

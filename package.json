@@ -5,7 +5,7 @@
   "description": "Node.js for Mobile Apps React Native plugin",
   "main": "index.js",
   "scripts": {
-    "postinstall": "node scripts/create-node-structure.js"
+    "postinstall": "node scripts/create-node-structure.js && node scripts/unzip-ios-xcframework.js"
   },
   "keywords": [
     "react-native",
